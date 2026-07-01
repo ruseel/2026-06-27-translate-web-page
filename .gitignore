@@ -3,8 +3,12 @@ out/
 __pycache__/
 *.pyc
 
+# Shared Pi prompts (track prompts, keep local state ignored)
+.pi/*
+!.pi/prompts/
+!.pi/prompts/**
+
 # Local tool state
-.pi/
 .fluree/
 .lsp/
 .clj-kondo/.cache/
