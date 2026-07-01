@@ -1,0 +1,14 @@
+# Runtime / generated outputs
+out/
+__pycache__/
+*.pyc
+
+# Local tool state
+.pi/
+.fluree/
+.lsp/
+.clj-kondo/.cache/
+
+# OS / editor
+.DS_Store
+*.swp

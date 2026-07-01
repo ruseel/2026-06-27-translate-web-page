@@ -1,0 +1,8 @@
+{
+  "title": "Small Translation Test",
+  "url": "https://example.org/small-translation-test",
+  "contentMarkdown": "A good tool should make the next step obvious.\n\nSmall examples help us test the whole pipeline quickly.\n\n> Make it work, then make it beautiful.",
+  "author": "Local Example",
+  "published": "",
+  "wordCount": 25
+}

@@ -1,0 +1,18 @@
+{:paths ["."]
+ :tasks
+ {:requires ([pipeline :as pipeline]
+             [fetch.core :as fetch]
+             [translate.core :as translate]
+             [genhtml.core :as genhtml])
+
+  page {:doc "Run fetch -> translate -> genhtml. Usage: bb page <url-or-defuddle-json> [ledger] (default ledger: translate)"
+        :task (apply pipeline/-main *command-line-args*)}
+
+  fetch {:doc "Fetch URL/Defuddle JSON, convert to JSON-LD, and insert into Fluree. Usage: bb fetch <url-or-defuddle-json> [ledger] (default ledger: translate)"
+         :task (apply fetch/-main *command-line-args*)}
+
+  translate {:doc "Query paragraphs from Fluree, call Pi, and insert translations with LLM metadata. Usage: bb translate <slug> OR bb translate <ledger> <slug>"
+             :task (apply translate/-main *command-line-args*)}
+
+  genhtml {:doc "Query paragraph pairs from Fluree and generate side-by-side HTML. Usage: bb genhtml <slug> OR bb genhtml <ledger> <slug>"
+           :task (apply genhtml/-main *command-line-args*)}}}
