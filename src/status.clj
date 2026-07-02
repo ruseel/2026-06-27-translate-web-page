@@ -1,7 +1,7 @@
-(ns status.core
+(ns status
   (:require [cheshire.core :as json]
             [clojure.string :as str]
-            [common.core :as c]))
+            [common :as c]))
 
 (defn status-query [page-id]
   (format "SELECT ?title ?url ?hash ?defuddle ?p ?t ?tp ?run ?model ?provider ?status ?at WHERE { <%s> a <https://schema.org/WebPage> . OPTIONAL { <%s> <https://schema.org/name> ?title . } OPTIONAL { <%s> <https://schema.org/url> ?url . } OPTIONAL { <%s> <%ssourceContentHash> ?hash . } OPTIONAL { <%s> <%sdefuddleVersion> ?defuddle . } OPTIONAL { ?p a <https://schema.org/Paragraph> ; <https://schema.org/isPartOf> <%s> . } OPTIONAL { ?t a <%sTranslatedParagraph> ; <https://schema.org/isPartOf> <%s> ; <https://schema.org/translationOfWork> ?tp ; <%stranslationRun> ?run . OPTIONAL { ?t <%stranslationStatus> ?status . } OPTIONAL { ?run <%sllmModel> ?model ; <%sllmProvider> ?provider . OPTIONAL { ?run <https://schema.org/dateCreated> ?at . } } } }"

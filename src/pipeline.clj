@@ -1,8 +1,9 @@
 (ns pipeline
+  (:refer-clojure :exclude [run!])
   (:require [cheshire.core :as json]
-            [fetch.core :as fetch]
-            [translate.core :as translate]
-            [genhtml.core :as genhtml]))
+            [fetch :as fetch]
+            [translate :as translate]
+            [genhtml :as genhtml]))
 
 (defn run!
   "Run fetch -> translate -> genhtml through Fluree.

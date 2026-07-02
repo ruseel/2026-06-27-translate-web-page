@@ -1,7 +1,7 @@
-(ns translate.core
+(ns translate
   (:require [cheshire.core :as json]
             [clojure.string :as str]
-            [common.core :as c])
+            [common :as c])
   (:import [java.time Instant]))
 
 (defn paragraph-query [page-id]

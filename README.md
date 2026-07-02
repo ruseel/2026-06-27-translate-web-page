@@ -21,17 +21,19 @@ The final HTML should be produced by deterministic Clojure program code, not by 
 ## Directory Structure
 
 ```text
-common/
-fetch/
-translate/
-genhtml/
-status/
+src/
+  common.clj
+  fetch.clj
+  translate.clj
+  genhtml.clj
+  status.clj
+  pipeline.clj
 prompts/
 examples/
 out/        # generated, ignored
 ```
 
-### `fetch/`
+### `src/fetch.clj`
 
 Clojure program for fetching and normalizing a web page.
 
@@ -50,7 +52,7 @@ Functions should be implemented as a clear logical progression: fetch, parse, no
 
 Canonical prompt templates used by both code and Pi-facing workflows. The current translator prompt is `prompts/translate-web-page-v1.md`; its SHA-256 hash is stored on every `TranslationRun`.
 
-### `translate/`
+### `src/translate.clj`
 
 Clojure program for translation orchestration through Pi.
 
@@ -65,7 +67,7 @@ Responsibilities:
 
 The translation prompt used here should be the same prompt used by the Pi skill/prompt template.
 
-### `genhtml/`
+### `src/genhtml.clj`
 
 Clojure program for HTML generation.
 
@@ -77,9 +79,9 @@ Responsibilities:
 - place original English sentence/paragraph on the left,
 - place translated Korean sentence/paragraph on the right.
 
-Visual design and aesthetics will be worked on separately. `genhtml/` should focus on correct structure, safe escaping, and deterministic assembly.
+Visual design and aesthetics will be worked on separately. `src/genhtml.clj` should focus on correct structure, safe escaping, and deterministic assembly.
 
-### `status/`
+### `src/status.clj`
 
 Small inspection command for the living seed. It reports article metadata, source hash, paragraph counts, translation version counts, missing translations, and latest run info.
 
@@ -104,14 +106,14 @@ This makes the workflow inspectable, replayable, and easier to improve than a si
 
 ```text
 URL
-  -> fetch/ Clojure program
+  -> src/fetch.clj
   -> Defuddle JSON
   -> schema.org-minded JSON-LD
   -> WebPage + Paragraph records in Fluree
-  -> translate/ Clojure program
+  -> src/translate.clj
   -> Pi shared prompt / skill prompt
   -> translated paragraph records in Fluree
-  -> genhtml/ Clojure program
+  -> src/genhtml.clj
   -> side-by-side HTML
 ```
 
@@ -143,9 +145,9 @@ bb page https://paulgraham.com/do.html
 
 This executes:
 
-1. `fetch/` — run Defuddle, convert the result to schema.org-minded JSON-LD, and insert `WebPage`/`Paragraph` records into Fluree.
-2. `translate/` — query paragraphs from Fluree, call Pi once for the full translation, validate the returned JSON, and insert `TranslatedParagraph` records plus a `TranslationRun` record containing the LLM model and thinking effort used.
-3. `genhtml/` — query original/translated paragraph pairs from Fluree and write side-by-side HTML.
+1. `src/fetch.clj` — run Defuddle, convert the result to schema.org-minded JSON-LD, and insert `WebPage`/`Paragraph` records into Fluree.
+2. `src/translate.clj` — query paragraphs from Fluree, call Pi once for the full translation, validate the returned JSON, and insert `TranslatedParagraph` records plus a `TranslationRun` record containing the LLM model and thinking effort used.
+3. `src/genhtml.clj` — query original/translated paragraph pairs from Fluree and write side-by-side HTML.
 
 Individual stages are also runnable. They use the `translate` ledger by default:
 
@@ -192,10 +194,12 @@ PI_TRANSLATION_MODEL='google/gemini-2.5-pro' PI_TRANSLATION_THINKING='high' bb t
 
 The repository now contains the Fluree-backed Clojure vertical slice:
 
-- `fetch/core.clj` — Defuddle/local JSON to `WebPage` + ordered `Paragraph` JSON-LD.
-- `translate/core.clj` — paragraph query, prompt rendering, Pi/mock translation, provenance-rich `TranslationRun` and `TranslatedParagraph` insertion.
-- `genhtml/core.clj` — deterministic side-by-side reader HTML.
-- `status/core.clj` — article/run inspection.
+- `src/fetch.clj` — Defuddle/local JSON to `WebPage` + ordered `Paragraph` JSON-LD.
+- `src/translate.clj` — paragraph query, prompt rendering, Pi/mock translation, provenance-rich `TranslationRun` and `TranslatedParagraph` insertion.
+- `src/genhtml.clj` — deterministic side-by-side reader HTML.
+- `src/status.clj` — article/run inspection.
+- `src/common.clj` — shared JSON-LD, Fluree, shell, slug/hash, and HTML helpers.
+- `src/pipeline.clj` — orchestration for `bb page`.
 - `prompts/translate-web-page-v1.md` — canonical translator prompt.
 
 The old ad-hoc Python HTML assembly path has been removed/replaced.

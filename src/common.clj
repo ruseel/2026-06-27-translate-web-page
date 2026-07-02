@@ -1,4 +1,4 @@
-(ns common.core
+(ns common
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [cheshire.core :as json]

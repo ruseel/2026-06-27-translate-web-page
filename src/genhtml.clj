@@ -1,7 +1,7 @@
-(ns genhtml.core
+(ns genhtml
   (:require [cheshire.core :as json]
             [clojure.string :as str]
-            [common.core :as c]))
+            [common :as c]))
 
 (defn pair-query [page-id]
   (format "SELECT ?pos ?kind ?en ?ko ?run ?at WHERE { ?p a <https://schema.org/Paragraph> ; <https://schema.org/isPartOf> <%s> ; <https://schema.org/position> ?pos ; <https://schema.org/text> ?en . OPTIONAL { ?p <%sblockKind> ?kind . } OPTIONAL { ?t a <%sTranslatedParagraph> ; <https://schema.org/translationOfWork> ?p ; <https://schema.org/text> ?ko . OPTIONAL { ?t <%stranslationRun> ?run . ?run <https://schema.org/dateCreated> ?at . } } } ORDER BY ?pos ?at" page-id c/twp c/twp c/twp))

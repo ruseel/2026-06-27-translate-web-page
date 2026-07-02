@@ -1,9 +1,9 @@
-(ns fetch.core
+(ns fetch
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [cheshire.core :as json]
             [clojure.string :as str]
-            [common.core :as c]))
+            [common :as c]))
 
 (def defuddle-version "0.19.1")
 
