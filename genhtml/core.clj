@@ -4,7 +4,7 @@
             [common.core :as c]))
 
 (defn pair-query [page-id]
-  (format "SELECT ?pos ?kind ?en ?ko ?run ?at WHERE { ?p a <https://schema.org/Paragraph> ; <https://schema.org/isPartOf> <%s> ; <https://schema.org/position> ?pos ; <https://schema.org/text> ?en . OPTIONAL { ?p <https://example.org/translate-web-page#blockKind> ?kind . } OPTIONAL { ?t a <https://example.org/translate-web-page#TranslatedParagraph> ; <https://schema.org/translationOfWork> ?p ; <https://schema.org/text> ?ko . OPTIONAL { ?t <https://example.org/translate-web-page#translationRun> ?run . ?run <https://schema.org/dateCreated> ?at . } } } ORDER BY ?pos ?at" page-id))
+  (format "SELECT ?pos ?kind ?en ?ko ?run ?at WHERE { ?p a <https://schema.org/Paragraph> ; <https://schema.org/isPartOf> <%s> ; <https://schema.org/position> ?pos ; <https://schema.org/text> ?en . OPTIONAL { ?p <%sblockKind> ?kind . } OPTIONAL { ?t a <%sTranslatedParagraph> ; <https://schema.org/translationOfWork> ?p ; <https://schema.org/text> ?ko . OPTIONAL { ?t <%stranslationRun> ?run . ?run <https://schema.org/dateCreated> ?at . } } } ORDER BY ?pos ?at" page-id c/twp c/twp c/twp))
 
 (defn page-title-query [page-id]
   (format "SELECT ?title ?url WHERE { <%s> a <https://schema.org/WebPage> . OPTIONAL { <%s> <https://schema.org/name> ?title . } OPTIONAL { <%s> <https://schema.org/url> ?url . } } LIMIT 1" page-id page-id page-id))
@@ -53,7 +53,8 @@
 (defn render-html [{:keys [title url rows]}]
   (let [safe-title (c/html-escape title)
         source (when-not (str/blank? url)
-                 (format "<p class=\"source\"><a href=\"%s\">%s</a></p>" (c/html-escape url) (c/html-escape url)))]
+                 (format "<p class=\"source\"><a href=\"%s\">%s</a></p>" (c/html-escape url) (c/html-escape url)))
+        paragraph-count (count rows)]
     (str "<!doctype html>\n"
          "<html lang=\"ko\">\n<head>\n"
          "  <meta charset=\"utf-8\">\n"
@@ -65,6 +66,8 @@
          "    main { max-width: 1180px; margin: 0 auto; padding: 40px 24px 80px; }\n"
          "    header { margin-bottom: 28px; }\n"
          "    .source a { color: #667085; }\n"
+         "    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }\n"
+         "    .badge { border: 1px solid rgba(31,41,51,.16); border-radius: 999px; padding: 4px 10px; color: #475467; background: rgba(255,255,255,.48); font-size: 13px; }\n"
          "    .row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; padding: 18px 0; border-top: 1px solid rgba(31,41,51,.14); }\n"
          "    .cell { background: rgba(255,255,255,.54); border-radius: 14px; padding: 18px 20px; line-height: 1.72; }\n"
          "    .original { color: #344054; }\n"
@@ -76,12 +79,13 @@
          "  <header>\n"
          "    <h1>" safe-title "</h1>\n"
          (or source "") "\n"
+         "    <div class=\"meta\"><span class=\"badge\">machine translation</span><span class=\"badge\">" paragraph-count " paragraphs</span></div>\n"
          "  </header>\n"
          (apply str
                 (for [{:keys [position kind en ko]} rows]
                   (str "  <section class=\"row kind-" (c/html-escape kind) "\" id=\"row-" position "\">\n"
-                       "    <div class=\"cell original\">" (text-node "en" kind en) "</div>\n"
-                       "    <div class=\"cell translation\">" (text-node "ko" kind ko) "</div>\n"
+                       "    <div class=\"cell original\" data-position=\"" position "\">" (text-node "en" kind en) "</div>\n"
+                       "    <div class=\"cell translation\" data-position=\"" position "\">" (text-node "ko" kind ko) "</div>\n"
                        "  </section>\n")))
          "</main>\n</body>\n</html>\n")))
 

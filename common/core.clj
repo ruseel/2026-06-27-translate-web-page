@@ -2,10 +2,12 @@
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [cheshire.core :as json]
-            [clojure.string :as str]))
+            [clojure.string :as str])
+  (:import [java.security MessageDigest]))
 
 (def schema "https://schema.org/")
-(def twp "https://example.org/translate-web-page#")
+(def base-iri (or (System/getenv "TWP_BASE_IRI") "https://example.org/translate-web-page"))
+(def twp (str base-iri "#"))
 
 (def jsonld-context
   {"schema" schema
@@ -25,12 +27,18 @@
    "blockKind" {"@id" "twp:blockKind"}
    "sourceUrl" {"@id" "twp:sourceUrl"}
    "slug" {"@id" "twp:slug"}
+   "sourceContentHash" {"@id" "twp:sourceContentHash"}
+   "defuddleVersion" {"@id" "twp:defuddleVersion"}
    "TranslationRun" "twp:TranslationRun"
    "translationRun" {"@id" "twp:translationRun" "@type" "@id"}
    "llmProvider" {"@id" "twp:llmProvider"}
    "llmModel" {"@id" "twp:llmModel"}
    "thinkingEffort" {"@id" "twp:thinkingEffort"}
    "promptName" {"@id" "twp:promptName"}
+   "promptHash" {"@id" "twp:promptHash"}
+   "translationStatus" {"@id" "twp:translationStatus"}
+   "translatorIdentity" {"@id" "twp:translatorIdentity"}
+   "license" {"@id" "schema:license"}
    "generatedAt" {"@id" "schema:dateCreated"}})
 
 (defn ensure-out! []
@@ -52,6 +60,10 @@
                     (str/replace #"^-+|-+$" ""))
         slug (subs cleaned 0 (min 80 (count cleaned)))]
     (if (str/blank? slug) "article" slug)))
+
+(defn sha256 [s]
+  (let [digest (.digest (MessageDigest/getInstance "SHA-256") (.getBytes (str s) "UTF-8"))]
+    (apply str (map #(format "%02x" (bit-and % 0xff)) digest))))
 
 (defn sh!
   "Run command and return stdout. Throws with stderr on non-zero exit."
@@ -97,13 +109,13 @@
   (str/escape (str (or s "")) {\& "&amp;" \< "&lt;" \> "&gt;" \" "&quot;" \' "&#39;"}))
 
 (defn page-id [slug]
-  (str "https://example.org/translate-web-page/page/" slug))
+  (str base-iri "/page/" slug))
 
 (defn paragraph-id [slug n]
-  (format "https://example.org/translate-web-page/paragraph/%s/%04d" slug (long n)))
+  (format "%s/paragraph/%s/%04d" base-iri slug (long n)))
 
 (defn translation-id [slug n]
-  (format "https://example.org/translate-web-page/translation/%s/%04d/ko" slug (long n)))
+  (format "%s/translation/%s/%04d/ko" base-iri slug (long n)))
 
 (defn translation-run-id [slug]
-  (str "https://example.org/translate-web-page/translation-run/" slug "/ko/" (System/currentTimeMillis)))
+  (str base-iri "/translation-run/" slug "/ko/" (System/currentTimeMillis)))

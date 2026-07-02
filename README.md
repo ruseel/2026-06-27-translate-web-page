@@ -12,18 +12,23 @@ Given a URL, the system should:
 2. Convert the extracted Defuddle JSON into JSON-LD, using schema.org concepts where possible.
 3. Store the source web page, original paragraphs, and translated paragraphs in Fluree.
 4. Use Pi/LLM to create Korean translations for the original paragraphs.
-5. Query the populated original/translated paragraph pairs from Fluree.
-6. Assemble the final result into HTML with the original English on the left and Korean translation on the right.
+5. Record provenance: source content hash, Defuddle version, prompt hash, model/provider, translator identity, license, status, and timestamps.
+6. Query the populated original/translated paragraph pairs from Fluree.
+7. Assemble the final result into HTML with the original English on the left and Korean translation on the right.
 
 The final HTML should be produced by deterministic Clojure program code, not by asking the LLM to generate a whole HTML document.
 
 ## Directory Structure
 
 ```text
+common/
 fetch/
 translate/
 genhtml/
-out/
+status/
+prompts/
+examples/
+out/        # generated, ignored
 ```
 
 ### `fetch/`
@@ -41,6 +46,10 @@ Responsibilities:
 
 Functions should be implemented as a clear logical progression: fetch, parse, normalize, transform to JSON-LD, validate, and insert.
 
+### `prompts/`
+
+Canonical prompt templates used by both code and Pi-facing workflows. The current translator prompt is `prompts/translate-web-page-v1.md`; its SHA-256 hash is stored on every `TranslationRun`.
+
 ### `translate/`
 
 Clojure program for translation orchestration through Pi.
@@ -51,7 +60,8 @@ Responsibilities:
 - call Pi with the shared translation prompt,
 - ask for the full translation in one go,
 - parse/validate the returned translations,
-- insert translated paragraph records back into Fluree.
+- insert translated paragraph records back into Fluree,
+- record provenance and machine/human status metadata.
 
 The translation prompt used here should be the same prompt used by the Pi skill/prompt template.
 
@@ -69,9 +79,13 @@ Responsibilities:
 
 Visual design and aesthetics will be worked on separately. `genhtml/` should focus on correct structure, safe escaping, and deterministic assembly.
 
+### `status/`
+
+Small inspection command for the living seed. It reports article metadata, source hash, paragraph counts, translation version counts, missing translations, and latest run info.
+
 ### `out/`
 
-Output directory for generated artifacts, such as Defuddle JSON snapshots, JSON-LD exports, translation debug files, and final HTML.
+Generated artifact directory for Defuddle JSON snapshots, JSON-LD exports, translation debug files, and final HTML. It is ignored by git and can be safely regenerated.
 
 ## Why Fluree
 
@@ -82,6 +96,7 @@ The project should model at least these entities:
 - `WebPage` — the fetched source URL and page metadata.
 - `Paragraph` — ordered paragraph/block records extracted from the page.
 - translated paragraph records — Korean translations linked back to the original paragraph.
+- `TranslationRun` — model/provider, prompt hash, translator identity, license, machine/review status, and timestamp.
 
 This makes the workflow inspectable, replayable, and easier to improve than a single one-shot LLM output.
 
@@ -147,10 +162,18 @@ bb translate <ledger> <slug>
 bb genhtml <ledger> <slug>
 ```
 
+Inspect the living state:
+
+```bash
+bb status <slug>
+bb status <ledger> <slug>
+```
+
 Small real-use test fixture:
 
 ```bash
 bb page examples/small.defuddle.json translate-small
+bb status translate-small example-org-small-translation-test
 ```
 
 For plumbing tests only, without calling Pi:
@@ -165,15 +188,17 @@ Pi options can be recorded explicitly with environment variables:
 PI_TRANSLATION_MODEL='google/gemini-2.5-pro' PI_TRANSLATION_THINKING='high' bb translate translate paulgraham-com-do-html
 ```
 
-## Current Prototype
+## Current Living Seed
 
-The repository currently contains an earlier prototype:
+The repository now contains the Fluree-backed Clojure vertical slice:
 
-- `.pi/prompts/translate.md` — existing Pi prompt template for URL-to-translation workflow.
-- `generate.py` — Python HTML renderer for translation-pair JSON.
-- `out/` — sample Defuddle outputs, translation-pair JSON files, and generated HTML files.
+- `fetch/core.clj` — Defuddle/local JSON to `WebPage` + ordered `Paragraph` JSON-LD.
+- `translate/core.clj` — paragraph query, prompt rendering, Pi/mock translation, provenance-rich `TranslationRun` and `TranslatedParagraph` insertion.
+- `genhtml/core.clj` — deterministic side-by-side reader HTML.
+- `status/core.clj` — article/run inspection.
+- `prompts/translate-web-page-v1.md` — canonical translator prompt.
 
-The next version should evolve this into the Fluree-backed Clojure design above, replacing the ad-hoc Python HTML assembly step.
+The old ad-hoc Python HTML assembly path has been removed/replaced.
 
 ## Non-goals
 

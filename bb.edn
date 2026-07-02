@@ -3,7 +3,8 @@
  {:requires ([pipeline :as pipeline]
              [fetch.core :as fetch]
              [translate.core :as translate]
-             [genhtml.core :as genhtml])
+             [genhtml.core :as genhtml]
+             [status.core :as status])
 
   page {:doc "Run fetch -> translate -> genhtml. Usage: bb page <url-or-defuddle-json> [ledger] (default ledger: translate)"
         :task (apply pipeline/-main *command-line-args*)}
@@ -15,4 +16,7 @@
              :task (apply translate/-main *command-line-args*)}
 
   genhtml {:doc "Query paragraph pairs from Fluree and generate side-by-side HTML. Usage: bb genhtml <slug> OR bb genhtml <ledger> <slug>"
-           :task (apply genhtml/-main *command-line-args*)}}}
+           :task (apply genhtml/-main *command-line-args*)}
+
+  status {:doc "Inspect article, paragraph, translation, and latest-run state. Usage: bb status <slug> OR bb status <ledger> <slug>"
+          :task (apply status/-main *command-line-args*)}}}

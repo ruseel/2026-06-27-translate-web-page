@@ -5,7 +5,7 @@
   (:import [java.time Instant]))
 
 (defn paragraph-query [page-id]
-  (format "SELECT ?p ?pos ?kind ?text WHERE { ?p a <https://schema.org/Paragraph> ; <https://schema.org/isPartOf> <%s> ; <https://schema.org/position> ?pos ; <https://schema.org/text> ?text . OPTIONAL { ?p <https://example.org/translate-web-page#blockKind> ?kind . } } ORDER BY ?pos" page-id))
+  (format "SELECT ?p ?pos ?kind ?text WHERE { ?p a <https://schema.org/Paragraph> ; <https://schema.org/isPartOf> <%s> ; <https://schema.org/position> ?pos ; <https://schema.org/text> ?text . OPTIONAL { ?p <%sblockKind> ?kind . } } ORDER BY ?pos" page-id c/twp))
 
 (defn fetch-paragraphs [ledger page-id]
   (let [result (c/fluree-query-json ledger (paragraph-query page-id))]
@@ -16,20 +16,20 @@
                   :kind (or (c/binding-value b :kind) "p")
                   :text (c/binding-value b :text)})))))
 
-(defn translation-prompt [paragraphs]
-  (str "You are translating an English web article into natural Korean for a side-by-side reading page.\n\n"
-       "Rules:\n"
-       "- Translate every paragraph into Korean.\n"
-       "- Preserve the exact position values.\n"
-       "- Do not merge, split, omit, summarize, or add paragraphs.\n"
-       "- Keep proper nouns and technical terms natural; include English in parentheses only when useful.\n"
-       "- Return ONLY valid JSON. No markdown fences, comments, or prose.\n\n"
-       "JSON shape:\n"
-       "[{\"position\":1,\"ko\":\"...\"}]\n\n"
-       "Input paragraphs:\n"
-       (json/generate-string
-        (mapv #(select-keys % [:position :kind :text]) paragraphs)
-        {:pretty true})))
+(def prompt-path "prompts/translate-web-page-v1.md")
+
+(defn prompt-template []
+  (slurp prompt-path))
+
+(defn rendered-prompt [paragraphs]
+  (str/replace (prompt-template)
+               "{{paragraphs_json}}"
+               (json/generate-string
+                (mapv #(select-keys % [:position :kind :text]) paragraphs)
+                {:pretty true})))
+
+(defn prompt-hash []
+  (str "sha256:" (c/sha256 (prompt-template))))
 
 (defn extract-json-array [s]
   (let [s (str/trim (str s))
@@ -61,7 +61,10 @@
   {:provider "pi"
    :model (or (System/getenv "PI_TRANSLATION_MODEL") "pi-default")
    :thinking-effort (or (System/getenv "PI_TRANSLATION_THINKING") "pi-default")
-   :prompt-name "translate-web-page/v1"})
+   :prompt-name "translate-web-page/v1"
+   :prompt-hash (prompt-hash)
+   :translator-identity (or (System/getenv "TWP_TRANSLATOR_IDENTITY") "local-pi-user")
+   :license (or (System/getenv "TWP_TRANSLATION_LICENSE") "unspecified")})
 
 (defn pi-command [prompt {:keys [model thinking-effort]}]
   (cond-> ["pi" "-p" "--no-tools" "--no-context-files" "--no-skills"]
@@ -73,7 +76,7 @@
   (let [opts (pi-options)]
     (println "[translate] calling Pi for" (count paragraphs) "paragraphs"
              "model=" (:model opts) "thinking=" (:thinking-effort opts))
-    (let [prompt (translation-prompt paragraphs)
+    (let [prompt (rendered-prompt paragraphs)
           out (apply c/sh! (pi-command prompt opts))
           rows (json/parse-string (extract-json-array out) true)]
       {:rows (validate-translations! paragraphs rows)
@@ -90,7 +93,10 @@
       {:rows (mapv (fn [{:keys [position] :as paragraph}]
                      {:position position :ko (mock-translation paragraph)})
                    paragraphs)
-       :run {:provider "mock" :model "mock-translation" :thinking-effort "none" :prompt-name "translate-web-page/v1"}})
+       :run {:provider "mock" :model "mock-translation" :thinking-effort "none" :prompt-name "translate-web-page/v1"
+             :prompt-hash (prompt-hash)
+             :translator-identity (or (System/getenv "TWP_TRANSLATOR_IDENTITY") "local-pi-user")
+             :license (or (System/getenv "TWP_TRANSLATION_LICENSE") "unspecified")}})
     (call-pi-translation paragraphs)))
 
 (defn translations->jsonld [slug page-id paragraphs translations run]
@@ -103,6 +109,10 @@
                   "llmModel" (:model run)
                   "thinkingEffort" (:thinking-effort run)
                   "promptName" (:prompt-name run)
+                  "promptHash" (:prompt-hash run)
+                  "translationStatus" "machine"
+                  "translatorIdentity" (:translator-identity run)
+                  "license" (:license run)
                   "generatedAt" (str (Instant/now))}]
     {"@context" c/jsonld-context
      "@graph" (into [run-node]
@@ -117,7 +127,8 @@
                                "inLanguage" "ko"
                                "isPartOf" page-id
                                "translationOfWork" id
-                               "translationRun" run-id}))
+                               "translationRun" run-id
+                               "translationStatus" "machine"}))
                           paragraphs))}))
 
 (defn translate->fluree! [{:keys [ledger slug page-id]}]

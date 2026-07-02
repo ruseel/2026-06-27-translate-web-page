@@ -5,6 +5,8 @@
             [clojure.string :as str]
             [common.core :as c]))
 
+(def defuddle-version "0.19.1")
+
 (defn local-json-path? [s]
   (and s (fs/exists? s) (str/ends-with? (str s) ".json")))
 
@@ -22,7 +24,7 @@
         (println "[fetch] running Defuddle for" input)
         (let [tmp (str raw-path ".tmp")]
           (let [r (p/shell {:out tmp :err :string :continue true}
-                           "npx" "--yes" "defuddle@0.19.1" "parse" input "--json")]
+                           "npx" "--yes" (str "defuddle@" defuddle-version) "parse" input "--json")]
             (when-not (zero? (:exit r))
               (throw (ex-info (str "Defuddle failed\n" (:err r)) {:result r}))))
           ;; Re-read and pretty-print so downstream diffs are stable.
@@ -74,6 +76,7 @@
   (let [title (or (:title data) source-url "Untitled")
         page-id (c/page-id slug)
         paragraphs (defuddle->paragraphs data)
+        source-content (str/join "\n\n" (map :text paragraphs))
         paragraph-nodes (mapv (fn [{:keys [position kind text]}]
                                 {"@id" (c/paragraph-id slug position)
                                  "@type" "Paragraph"
@@ -88,6 +91,8 @@
                    "url" source-url
                    "sourceUrl" source-url
                    "slug" slug
+                   "sourceContentHash" (str "sha256:" (c/sha256 source-content))
+                   "defuddleVersion" defuddle-version
                    "name" title
                    "headline" title
                    "hasPart" (mapv #(select-keys % ["@id"]) paragraph-nodes)}]
@@ -96,11 +101,12 @@
 
 (defn fetch->fluree! [{:keys [input ledger]}]
   (let [source (or input "article.json")
-        slug (c/slugify (if (local-json-path? source)
-                          (or (:url (c/read-json source)) (:title (c/read-json source)) source)
+        local-data (when (local-json-path? source) (c/read-json source))
+        slug (c/slugify (if local-data
+                          (or (:url local-data) (:title local-data) source)
                           source))
         {:keys [data path]} (fetch-defuddle! source slug)
-        jsonld (defuddle->jsonld (if (local-json-path? source) (or (:url data) "file:article.json") source) slug data)
+        jsonld (defuddle->jsonld (if local-data (or (:url data) "file:article.json") source) slug data)
         jsonld-path (str "out/" slug ".jsonld")]
     (c/write-json! jsonld-path jsonld)
     (c/fluree-insert-file! ledger jsonld-path)
