@@ -1,0 +1,19 @@
+[Unit]
+Description=Translate WebPage Viewer (bb viewer on :8000)
+After=network.target
+
+[Service]
+Type=simple
+User=exedev
+Group=exedev
+WorkingDirectory=/home/exedev/2026-06-27-translate-web-page
+Environment=VIEWER_PORT=8000
+Environment=PATH=/home/exedev/bin:/home/exedev/.cargo/bin:/home/exedev/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+ExecStart=/usr/local/bin/bb viewer 8000
+Restart=on-failure
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

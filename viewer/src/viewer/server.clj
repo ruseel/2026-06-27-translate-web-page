@@ -35,9 +35,21 @@
 (defn json-response [value]
   (response 200 "application/json" (json/generate-string value {:pretty true})))
 
+(defn json-safe [x]
+  (cond
+    (nil? x) nil
+    (string? x) x
+    (number? x) x
+    (boolean? x) x
+    (keyword? x) (name x)
+    (symbol? x) (str x)
+    (map? x) (into {} (map (fn [[k v]] [(json-safe k) (json-safe v)])) x)
+    (coll? x) (mapv json-safe x)
+    :else (str x)))
+
 (defn error-response [status message data]
   (response status "application/json"
-            (json/generate-string {:error message :data data} {:pretty true})))
+            (json/generate-string {:error message :data (json-safe data)} {:pretty true})))
 
 (defn not-found []
   (error-response 404 "Not found" {}))
