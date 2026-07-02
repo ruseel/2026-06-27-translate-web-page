@@ -57,20 +57,27 @@
         (throw (ex-info "Invalid translation row" {:row row}))))
     rows))
 
+(def default-pi-model "openai-codex/gpt-5.5")
+(def default-pi-thinking-effort "xhigh")
+
+(defn env-or-default [k default]
+  (let [v (System/getenv k)]
+    (if (str/blank? v) default v)))
+
 (defn pi-options []
   {:provider "pi"
-   :model (or (System/getenv "PI_TRANSLATION_MODEL") "pi-default")
-   :thinking-effort (or (System/getenv "PI_TRANSLATION_THINKING") "pi-default")
+   :model (env-or-default "PI_TRANSLATION_MODEL" default-pi-model)
+   :thinking-effort (env-or-default "PI_TRANSLATION_THINKING" default-pi-thinking-effort)
    :prompt-name "translate-web-page/v1"
    :prompt-hash (prompt-hash)
    :translator-identity (or (System/getenv "TWP_TRANSLATOR_IDENTITY") "local-pi-user")
    :license (or (System/getenv "TWP_TRANSLATION_LICENSE") "unspecified")})
 
 (defn pi-command [prompt {:keys [model thinking-effort]}]
-  (cond-> ["pi" "-p" "--no-tools" "--no-context-files" "--no-skills"]
-    (not= model "pi-default") (into ["--model" model])
-    (not= thinking-effort "pi-default") (into ["--thinking" thinking-effort])
-    true (conj prompt)))
+  ["pi" "-p" "--no-tools" "--no-context-files" "--no-skills"
+   "--model" model
+   "--thinking" thinking-effort
+   prompt])
 
 (defn call-pi-translation [paragraphs]
   (let [opts (pi-options)]

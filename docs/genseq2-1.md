@@ -10,10 +10,12 @@ CATEGORY=Pilot-and-Scale; USING=Pilot-and-Scale
 2. **Make one local vertical slice work end-to-end.**  
    For a single URL: run Defuddle, extract the main article, translate with one LLM, assemble side-by-side HTML, and write/read the result from Fluree. This becomes the living seed.
 
-3. **Separate the pipeline into stable contracts.**  
-   Turn the working slice into explicit stages:  
-   `fetch → extract → segment → translate → review/validate → assemble HTML → publish to Fluree → consume`.  
-   Each stage should have simple JSON inputs/outputs so contributors can replace pieces.
+3. **Separate the pipeline into Fluree-backed stable contracts.**  
+   In this repo, the stage boundary is the Fluree ledger, not separate translation input/output files.  
+   `fetch` inserts the source article into Fluree as a predefined `WebPage` plus ordered `Paragraph` records.  
+   `translate` queries Fluree for that `WebPage` and its `Paragraph` records, runs translation internally, and does not expose or depend on a separate translation input/output file contract.  
+   After translation completes, `translate` inserts the result back into Fluree in a predefined form: `TranslationRun` plus ordered `TranslatedParagraph` records.  
+   Consumers such as `genhtml` then query Fluree and render from those records.
 
 4. **Let contributors bring their own LLM.**  
    Add provider adapters/configuration: OpenAI, Anthropic, local Ollama, Gemini, etc. The shared system should not require one central API key. Each contributor runs translation with their own credentials, but publishes to the same schema.
