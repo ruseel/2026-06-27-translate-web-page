@@ -65,6 +65,11 @@
   (let [digest (.digest (MessageDigest/getInstance "SHA-256") (.getBytes (str s) "UTF-8"))]
     (apply str (map #(format "%02x" (bit-and % 0xff)) digest))))
 
+(def default-fluree-timeout-ms
+  "Hard cap for a single fluree CLI query, so a slow/unindexed query can never
+  pin an http-kit worker thread indefinitely. Override via FLUREE_QUERY_TIMEOUT_MS."
+  (parse-long (or (System/getenv "FLUREE_QUERY_TIMEOUT_MS") "60000")))
+
 (defn sh!
   "Run command and return stdout. Throws with stderr on non-zero exit."
   [& args]
@@ -73,6 +78,28 @@
       (throw (ex-info (str "Command failed: " (str/join " " args) "\n" (:err r))
                       {:cmd args :result r})))
     (:out r)))
+
+(defn sh-with-timeout!
+  "Run command and return stdout, forcibly destroying the process if it runs
+  longer than timeout-ms. Throws on non-zero (or timed-out) exit. The process
+  is killed so a runaway fluree query cannot exhaust worker threads."
+  ([args] (sh-with-timeout! args default-fluree-timeout-ms))
+  ([args timeout-ms]
+   (let [proc (apply p/process {:out :string :err :string :continue true} args)
+         deadline (+ (System/nanoTime) (* (long timeout-ms) 1000000))]
+     (loop []
+       (cond
+         (not (p/alive? proc))
+         (let [r @proc]
+           (when-not (zero? (:exit r))
+             (throw (ex-info (str "Command failed: " (str/join " " args) "\n" (:err r))
+                             {:cmd args :exit (:exit r) :err (:err r)})))
+           (:out r))
+         (> (System/nanoTime) deadline)
+         (do (p/destroy proc) @proc
+             (throw (ex-info (str "Command timed out after " timeout-ms "ms: " (str/join " " args))
+                             {:cmd args :timeout timeout-ms})))
+         :else (do (Thread/sleep 50) (recur)))))))
 
 (defn sh
   "Run command and return process map, without throwing."
@@ -99,7 +126,7 @@
 
 (defn fluree-query-json [ledger sparql]
   (ensure-ledger! ledger)
-  (let [out (sh! "fluree" "query" ledger "--format" "json" sparql)]
+  (let [out (sh-with-timeout! ["fluree" "query" ledger "--format" "json" sparql])]
     (json/parse-string out true)))
 
 (defn binding-value [binding k]

@@ -1,0 +1,14 @@
+[Unit]
+Description=Rebuild Fluree index for translate ledger
+After=network.target
+
+[Service]
+Type=oneshot
+User=exedev
+Group=exedev
+WorkingDirectory=/home/exedev/2026-06-27-translate-web-page
+Environment=PATH=/home/exedev/bin:/home/exedev/.cargo/bin:/home/exedev/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+ExecStart=/home/exedev/bin/fluree index translate
+TimeoutStartSec=600
+StandardOutput=journal
+StandardError=journal
