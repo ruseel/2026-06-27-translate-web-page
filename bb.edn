@@ -1,10 +1,11 @@
-{:paths ["src"]
+{:paths ["src" "viewer/src"]
  :tasks
  {:requires ([pipeline :as pipeline]
              [fetch :as fetch]
              [translate :as translate]
              [genhtml :as genhtml]
-             [status :as status])
+             [status :as status]
+             [viewer.server :as viewer])
 
   page {:doc "Run fetch -> translate -> genhtml. Usage: bb page <url-or-defuddle-json> [ledger] (default ledger: translate)"
         :task (apply pipeline/-main *command-line-args*)}
@@ -19,4 +20,7 @@
            :task (apply genhtml/-main *command-line-args*)}
 
   status {:doc "Inspect article, paragraph, translation, and latest-run state. Usage: bb status <slug> OR bb status <ledger> <slug>"
-          :task (apply status/-main *command-line-args*)}}}
+          :task (apply status/-main *command-line-args*)}
+
+  viewer {:doc "Start the Fluree multiple-LLM translation viewer. Usage: bb viewer [port] (default 8123)"
+          :task (apply viewer/-main *command-line-args*)}}}

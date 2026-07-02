@@ -16,6 +16,14 @@ bb page https://paulgraham.com/do.html
 bb fetch <url-or-defuddle-json> [ledger]
 bb translate <slug>
 bb genhtml <slug>
+bb viewer [port]
+```
+
+Open the queryable multiple-LLM viewer:
+
+```bash
+bb viewer 8123
+# then visit http://localhost:8123/?ledger=translate&slug=paulgraham-com-foundermode-html
 ```
 
 Translation uses Pi with `openai-codex/gpt-5.5` and `xhigh` thinking by default. Contributors can bring their own configured Pi model/provider by overriding:
@@ -41,4 +49,7 @@ The repository now contains the Fluree-backed Clojure vertical slice:
 - `src/status.clj` — article/run inspection.
 - `src/common.clj` — shared JSON-LD, Fluree, shell, slug/hash, and HTML helpers.
 - `src/pipeline.clj` — orchestration for `bb page`.
+- `viewer/src/viewer/data.clj` — Fluree queries for pages, segments, and multiple translation candidates.
+- `viewer/src/viewer/server.clj` — Datastar-ready HTTP viewer/API for `bb viewer`.
+- `viewer/src/viewer/client.cljs` — CLJS browser source for the viewer interactions.
 - `prompts/translate-web-page-v1.md` — canonical translator prompt.

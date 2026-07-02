@@ -8,6 +8,12 @@ src/
   genhtml.clj
   status.clj
   pipeline.clj
+viewer/
+  src/viewer/
+    data.clj
+    server.clj
+    client.cljs
+    client.js
 prompts/
 examples/
 out/        # generated, ignored
@@ -64,6 +70,14 @@ Visual design and aesthetics will be worked on separately. `src/genhtml.clj` sho
 ### `src/status.clj`
 
 Small inspection command for the living seed. It reports article metadata, source hash, paragraph counts, translation version counts, missing translations, and latest run info.
+
+### `viewer/src/viewer/`
+
+Small queryable viewer grown from the vertical slice:
+
+- `data.clj` queries Fluree for pages, source segments, and all matching `TranslatedParagraph` candidates with `TranslationRun` provenance.
+- `server.clj` serves the Datastar-ready HTML shell plus `/api/pages` and `/api/page` JSON endpoints via `bb viewer`.
+- `client.cljs` is the CLJS source for browser interactions; `client.js` is the currently served browser artifact.
 
 ### `out/`
 
