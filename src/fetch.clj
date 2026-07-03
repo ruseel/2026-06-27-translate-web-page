@@ -45,18 +45,30 @@
       (and (< (count t) 40) (re-find #"\b(\d{4}|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)" (str/lower-case t))) "date"
       :else "p")))
 
+(defn clean-inline-markdown [text]
+  (-> text
+      ;; PG footnotes often arrive from Defuddle as \[[2](#f2n)\]. Store a
+      ;; readable marker so translation prompts do not encourage literal
+      ;; Markdown artifacts in the Korean text.
+      (str/replace #"\\?\[\[(\d+)\]\(#[^)\s]+\)\\?\]" "[$1]")
+      (str/replace #"\[([^\]\n]{1,120})\]\((https?://[^)\s]+|mailto:[^)\s]+|#[^)\s]+)\)" "$1")
+      (str/replace #"\\([\[\]])" "$1")
+      (str/replace #"\*\*([^*]+)\*\*" "$1")
+      (str/replace #"__([^_]+)__" "$1")))
+
 (defn clean-markdown [kind text]
   (let [t (-> text
               (str/replace #"\s+" " ")
-              str/trim)]
-    (case kind
-      "quote" (-> t (str/replace #"^>\s*" "") str/trim)
-      "h1" (-> t (str/replace #"^#\s*" "") str/trim)
-      "h2" (-> t (str/replace #"^##\s*" "") str/trim)
-      "h3" (-> t (str/replace #"^###\s*" "") str/trim)
-      "li" (-> t (str/replace #"^[-*+]\s*" "") str/trim)
-      "thanks" (-> t (str/replace #"\*\*" "") str/trim)
-      t)))
+              str/trim)
+        t (case kind
+            "quote" (-> t (str/replace #"^>\s*" "") str/trim)
+            "h1" (-> t (str/replace #"^#\s*" "") str/trim)
+            "h2" (-> t (str/replace #"^##\s*" "") str/trim)
+            "h3" (-> t (str/replace #"^###\s*" "") str/trim)
+            "li" (-> t (str/replace #"^[-*+]\s*" "") str/trim)
+            "thanks" (-> t (str/replace #"\*\*" "") str/trim)
+            t)]
+    (clean-inline-markdown t)))
 
 (defn defuddle->paragraphs [data]
   (let [body (or (:contentMarkdown data) (:content data))]
@@ -72,10 +84,17 @@
                            :text (clean-markdown kind raw)})))
          vec)))
 
+(defn article-creation-date [data paragraphs]
+  (or (not-empty (str/trim (str (or (:published data) ""))))
+      (some (fn [{:keys [kind text]}]
+              (when (= kind "date") text))
+            paragraphs)))
+
 (defn defuddle->jsonld [source-url slug data]
   (let [title (or (:title data) source-url "Untitled")
         page-id (c/page-id slug)
         paragraphs (defuddle->paragraphs data)
+        creation-date (article-creation-date data paragraphs)
         source-content (str/join "\n\n" (map :text paragraphs))
         paragraph-nodes (mapv (fn [{:keys [position kind text]}]
                                 {"@id" (c/paragraph-id slug position)
@@ -86,16 +105,18 @@
                                  "inLanguage" "en"
                                  "isPartOf" page-id})
                               paragraphs)
-        page-node {"@id" page-id
-                   "@type" "WebPage"
-                   "url" source-url
-                   "sourceUrl" source-url
-                   "slug" slug
-                   "sourceContentHash" (str "sha256:" (c/sha256 source-content))
-                   "defuddleVersion" defuddle-version
-                   "name" title
-                   "headline" title
-                   "hasPart" (mapv #(select-keys % ["@id"]) paragraph-nodes)}]
+        page-node (cond-> {"@id" page-id
+                           "@type" "WebPage"
+                           "url" source-url
+                           "sourceUrl" source-url
+                           "slug" slug
+                           "sourceContentHash" (str "sha256:" (c/sha256 source-content))
+                           "defuddleVersion" defuddle-version
+                           "name" title
+                           "headline" title
+                           "hasPart" (mapv #(select-keys % ["@id"]) paragraph-nodes)}
+                    (not (str/blank? creation-date))
+                    (assoc "creationDate" creation-date))]
     {"@context" c/jsonld-context
      "@graph" (into [page-node] paragraph-nodes)}))
 

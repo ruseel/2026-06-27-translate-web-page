@@ -232,6 +232,46 @@ button {
   transition: opacity 160ms ease;
 }
 
+h2.v2-text,
+h3.v2-text,
+h4.v2-text {
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+blockquote.v2-text {
+  border-left: 2px solid var(--accent-soft);
+  font-style: italic;
+  padding-left: 16px;
+}
+
+.v2-inline-link,
+.v2-note-ref a {
+  color: var(--accent);
+  text-decoration-color: var(--accent-soft);
+  text-underline-offset: 0.16em;
+}
+
+.v2-note-ref {
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.65em;
+  font-style: normal;
+  font-weight: 600;
+  margin-left: 0.12em;
+  vertical-align: super;
+}
+
+.v2-note-ref a {
+  text-decoration: none;
+}
+
+.v2-anchor {
+  display: block;
+  position: relative;
+  top: -84px;
+  visibility: hidden;
+}
+
 .v2-source {
   opacity: 0.9;
   font-family: "Lora", ui-serif, Georgia, serif;

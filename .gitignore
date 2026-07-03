@@ -13,6 +13,9 @@ __pycache__/
 .lsp/
 .clj-kondo/.cache/
 
+# Local credentials
+*.jwt
+
 # OS / editor
 .DS_Store
 *.swp

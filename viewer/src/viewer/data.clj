@@ -3,8 +3,21 @@
             [common :as c]))
 
 (defn pages-query []
-  (format "SELECT ?page ?slug ?title ?url ?hash WHERE { ?page a <https://schema.org/WebPage> . OPTIONAL { ?page <%sslug> ?slug . } OPTIONAL { ?page <https://schema.org/name> ?title . } OPTIONAL { ?page <https://schema.org/url> ?url . } OPTIONAL { ?page <%ssourceContentHash> ?hash . } } ORDER BY ?title ?page"
-          c/twp c/twp))
+  (format (str "SELECT ?page ?slug ?title ?url ?hash ?creationDate ?publishedDate ?articleDateText WHERE { "
+               "?page a <https://schema.org/WebPage> . "
+               "OPTIONAL { ?page <%sslug> ?slug . } "
+               "OPTIONAL { ?page <https://schema.org/name> ?title . } "
+               "OPTIONAL { ?page <https://schema.org/url> ?url . } "
+               "OPTIONAL { ?page <%ssourceContentHash> ?hash . } "
+               "OPTIONAL { ?page <https://schema.org/dateCreated> ?creationDate . } "
+               "OPTIONAL { ?page <https://schema.org/datePublished> ?publishedDate . } "
+               "OPTIONAL { ?dateParagraph a <https://schema.org/Paragraph> ; "
+               "<https://schema.org/isPartOf> ?page ; "
+               "<https://schema.org/position> 1 ; "
+               "<https://schema.org/text> ?articleDateText ; "
+               "<%sblockKind> \"date\" . } "
+               "} ORDER BY ?title ?page")
+          c/twp c/twp c/twp))
 
 (defn page-query [page-id]
   (format "SELECT ?title ?url ?hash ?defuddle WHERE { <%s> a <https://schema.org/WebPage> . OPTIONAL { <%s> <https://schema.org/name> ?title . } OPTIONAL { <%s> <https://schema.org/url> ?url . } OPTIONAL { <%s> <%ssourceContentHash> ?hash . } OPTIONAL { <%s> <%sdefuddleVersion> ?defuddle . } } LIMIT 1"
@@ -41,18 +54,62 @@
 (defn bval [row k]
   (c/binding-value row k))
 
+(def month-number
+  {"jan" 1 "january" 1
+   "feb" 2 "february" 2
+   "mar" 3 "march" 3
+   "apr" 4 "april" 4
+   "may" 5
+   "jun" 6 "june" 6
+   "jul" 7 "july" 7
+   "aug" 8 "august" 8
+   "sep" 9 "sept" 9 "september" 9
+   "oct" 10 "october" 10
+   "nov" 11 "november" 11
+   "dec" 12 "december" 12})
+
+(defn creation-date-sort-value [s]
+  (let [t (some-> s str/trim)]
+    (when-not (str/blank? t)
+      (or (when-let [[_ year month day] (re-find #"^(\d{4})-(\d{1,2})(?:-(\d{1,2}))?" t)]
+            (+ (* (parse-long year) 10000)
+               (* (parse-long month) 100)
+               (parse-long (or day "1"))))
+          (when-let [[_ month year] (re-find #"(?i)^([a-z]{3,9})\.?\s+(\d{4})" t)]
+            (when-let [m (month-number (str/lower-case month))]
+              (+ (* (parse-long year) 10000) (* m 100) 1)))
+          (when-let [[_ year month] (re-find #"^(\d{4})년\s*(\d{1,2})월" t)]
+            (+ (* (parse-long year) 10000) (* (parse-long month) 100) 1))
+          (when-let [[_ year] (re-find #"^(\d{4})$" t)]
+            (* (parse-long year) 10000))))))
+
+(defn page-from-rows [rows]
+  (let [row (first rows)
+        page-id (bval row :page)
+        slug (or (bval row :slug) (fallback-slug page-id))
+        creation-date (or (some #(bval % :creationDate) rows)
+                          (some #(bval % :publishedDate) rows)
+                          (some #(bval % :articleDateText) rows))]
+    {:id page-id
+     :slug slug
+     :title (or (bval row :title) slug "Untitled")
+     :url (bval row :url)
+     :sourceContentHash (bval row :hash)
+     :creationDate creation-date
+     :creationDateSort (creation-date-sort-value creation-date)}))
+
+(defn page-sort-key [{:keys [creationDateSort title slug]}]
+  [(if creationDateSort (- creationDateSort) Long/MAX_VALUE)
+   (or title "")
+   (or slug "")])
+
 (defn fetch-pages [ledger]
   (let [rows (get-in (c/fluree-query-json ledger (pages-query)) [:results :bindings])]
     (->> rows
-         (mapv (fn [row]
-                 (let [page-id (bval row :page)
-                       slug (or (bval row :slug) (fallback-slug page-id))]
-                   {:id page-id
-                    :slug slug
-                    :title (or (bval row :title) slug "Untitled")
-                    :url (bval row :url)
-                    :sourceContentHash (bval row :hash)})))
-         (sort-by (juxt :title :slug))
+         (group-by #(bval % :page))
+         vals
+         (mapv page-from-rows)
+         (sort-by page-sort-key)
          vec)))
 
 (defn fetch-page-meta [ledger page-id slug]

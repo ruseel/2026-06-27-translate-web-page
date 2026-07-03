@@ -28,6 +28,8 @@
    "sourceUrl" {"@id" "twp:sourceUrl"}
    "slug" {"@id" "twp:slug"}
    "sourceContentHash" {"@id" "twp:sourceContentHash"}
+   "creationDate" {"@id" "schema:dateCreated"}
+   "datePublished" {"@id" "schema:datePublished"}
    "defuddleVersion" {"@id" "twp:defuddleVersion"}
    "TranslationRun" "twp:TranslationRun"
    "translationRun" {"@id" "twp:translationRun" "@type" "@id"}

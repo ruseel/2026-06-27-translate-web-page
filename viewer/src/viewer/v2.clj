@@ -59,12 +59,14 @@
   (when-not (str/blank? hash)
     (subs hash 0 (min 12 (count hash)))))
 
-(defn render-page-card [ledger {:keys [slug title url sourceContentHash]}]
+(defn render-page-card [ledger {:keys [slug title url sourceContentHash creationDate]}]
   (str "<a class=\"v2-page-card\" href=\"" (c/html-escape (page-href ledger slug)) "\">"
        "<span class=\"v2-card-kicker\">Translated page</span>"
        "<h2>" (c/html-escape (or title slug "Untitled")) "</h2>"
        "<p class=\"v2-card-url\">" (c/html-escape (or (hostname url) url "No source URL")) "</p>"
        "<div class=\"v2-card-meta\">"
+       (when-not (str/blank? creationDate)
+         (str "<span>" (c/html-escape creationDate) "</span>"))
        (when-not (str/blank? sourceContentHash)
          (str "<span>hash " (c/html-escape (short-hash sourceContentHash)) "</span>"))
        "<span>Read translation</span>"

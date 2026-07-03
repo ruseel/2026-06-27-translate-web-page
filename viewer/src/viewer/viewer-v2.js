@@ -8,6 +8,36 @@
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
 
+  const safeHref = (value) => {
+    const href = String(value ?? "").trim();
+    return /^(https?:|mailto:|#)/i.test(href) ? href : "#";
+  };
+
+  const inlineHtml = (value) => {
+    const tokens = [];
+    const token = (markup) => `\u0000${tokens.push(markup) - 1}\u0000`;
+    let text = String(value ?? "");
+
+    // Defuddle turns PG-style footnote links into Markdown text like
+    // \[[2](#f2n)\]. Render those as compact note references instead of
+    // exposing the Markdown escape characters in the reader.
+    text = text.replace(/\\?\[\[(\d+)\]\((#[^)\s]+)\)\\?\]/g, (_, label, href) => (
+      token(`<sup class="v2-note-ref"><a href="${html(safeHref(href))}">${html(label)}</a></sup>`)
+    ));
+
+    text = text.replace(/\[([^\]\n]{1,120})\]\((https?:\/\/[^)\s]+|mailto:[^)\s]+|#[^)\s]+)\)/g, (_, label, href) => (
+      token(`<a class="v2-inline-link" href="${html(safeHref(href))}">${html(label)}</a>`)
+    ));
+
+    text = text.replace(/\\([\[\]])/g, "$1");
+
+    let out = html(text)
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/\u0000(\d+)\u0000/g, (_, i) => tokens[Number(i)] || "");
+
+    return out;
+  };
+
   const bootEl = $("boot-data");
   const boot = bootEl ? JSON.parse(bootEl.textContent) : { view: null };
   const stored = (() => {
@@ -35,23 +65,52 @@
 
   const selectedCandidate = (segment) => (segment.candidates || [])[0] || null;
 
-  const sourceHtml = (segment) => `
-    <p class="v2-text v2-source" lang="en">${html(segment.source)}</p>`;
+  const tagFor = (kind) => ({
+    h1: "h2",
+    h2: "h3",
+    h3: "h4",
+    quote: "blockquote",
+  })[kind] || "p";
+
+  const noteNumber = (segment) => {
+    const match = String(segment.source ?? "").match(/^\\?\[(\d+)\\?\]\s/);
+    return match ? match[1] : null;
+  };
+
+  const textBlockHtml = ({ className, lang, kind, text }) => {
+    const tag = tagFor(kind);
+    const prefix = kind === "li" ? "• " : "";
+    return `<${tag} class="v2-text ${className}" lang="${html(lang)}">${prefix}${inlineHtml(text)}</${tag}>`;
+  };
+
+  const sourceHtml = (segment) => textBlockHtml({
+    className: "v2-source",
+    lang: "en",
+    kind: segment.kind,
+    text: segment.source,
+  });
 
   const translationHtml = (segment) => {
     const candidate = selectedCandidate(segment);
     if (!candidate) {
       return '<p class="v2-text v2-translation v2-empty">No translation matches this page.</p>';
     }
-    return `<p class="v2-text v2-translation" lang="${html(candidate.language || "ko")}">${html(candidate.text)}</p>`;
+    return textBlockHtml({
+      className: "v2-translation",
+      lang: candidate.language || "ko",
+      kind: segment.kind,
+      text: candidate.text,
+    });
   };
 
   const paragraphHtml = (segment) => {
     const parts = [];
+    const note = noteNumber(segment);
     if (state.layout !== "ko-only") parts.push(sourceHtml(segment));
     if (state.layout !== "en-only") parts.push(translationHtml(segment));
     return `
       <section class="v2-paragraph" id="segment-${html(segment.position)}" data-layout="${html(state.layout)}">
+        ${note ? `<span class="v2-anchor" id="f${html(note)}n"></span>` : ""}
         ${parts.join("")}
       </section>`;
   };
