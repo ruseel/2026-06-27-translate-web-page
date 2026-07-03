@@ -23,9 +23,12 @@ Open the queryable multiple-LLM viewer:
 
 ```bash
 bb viewer 8123
-# then visit http://localhost:8123/?ledger=translate&slug=paulgraham-com-foundermode-html
-# reader-style detail page:
-# http://localhost:8123/v2?ledger=translate&slug=paulgraham-com-foundermode-html
+# then visit the reader archive:
+# http://localhost:8123/?ledger=translate
+# open a reader detail page:
+# http://localhost:8123/page/paulgraham-com-foundermode-html?ledger=translate
+# legacy queryable v1 remains available at:
+# http://localhost:8123/v1?ledger=translate&slug=paulgraham-com-foundermode-html
 ```
 
 Translation uses Pi with `openai-codex/gpt-5.5` and `xhigh` thinking by default. Contributors can bring their own configured Pi model/provider by overriding:
@@ -52,7 +55,7 @@ The repository now contains the Fluree-backed Clojure vertical slice:
 - `src/common.clj` — shared JSON-LD, Fluree, shell, slug/hash, and HTML helpers.
 - `src/pipeline.clj` — orchestration for `bb page`.
 - `viewer/src/viewer/data.clj` — Fluree queries for pages, segments, and multiple translation candidates.
-- `viewer/src/viewer/server.clj` — Datastar-ready HTTP viewer/API for `bb viewer`.
-- `viewer/src/viewer/v2.clj` — reader-style detail page shell for `/v2`.
+- `viewer/src/viewer/server.clj` — HTTP viewer/API for `bb viewer` (`/` archive, `/page/<slug>` reader, `/v1` legacy queryable UI).
+- `viewer/src/viewer/v2.clj` — reader-style archive and detail page shell.
 - `viewer/src/viewer/client.cljs` — CLJS browser source for the viewer interactions.
 - `prompts/translate-web-page-v1.md` — canonical translator prompt.

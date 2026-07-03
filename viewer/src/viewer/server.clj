@@ -190,13 +190,33 @@
                 :segments []})]
     {:ledger ledger :pages pages :selected-slug selected-slug :filters filters :view view}))
 
-(defn handle-index [request]
+(defn list-state [query]
+  (let [ledger (param query :ledger default-ledger)]
+    {:ledger ledger
+     :pages (data/fetch-pages ledger)
+     :selected-slug nil
+     :filters (filters-from-query query)}))
+
+(defn handle-v1 [request]
   (let [state (initial-state (request-query request))]
     (response 200 "text/html" (render-app-html state))))
 
+(defn handle-list [request]
+  (response 200 "text/html" (v2/render-list-html (list-state (request-query request)))))
+
+(defn detail-state [request slug]
+  (initial-state (cond-> (request-query request)
+                   (not (str/blank? slug)) (assoc :slug slug))))
+
 (defn handle-v2 [request]
-  (let [state (initial-state (request-query request))]
-    (response 200 "text/html" (v2/render-app-html state))))
+  (let [slug (param (request-query request) :slug nil)
+        state (detail-state request slug)]
+    (if (str/blank? slug)
+      (handle-list request)
+      (response 200 "text/html" (v2/render-app-html state)))))
+
+(defn handle-detail [request slug]
+  (response 200 "text/html" (v2/render-app-html (detail-state request slug))))
 
 (defn handle-pages [request]
   (let [query (request-query request)
@@ -214,20 +234,27 @@
 (defn serve-file [path content-type]
   (response 200 content-type (slurp path)))
 
+(defn page-slug-from-uri [uri]
+  (when (str/starts-with? uri "/page/")
+    (decode-url (subs uri (count "/page/")))))
+
 (defn handle [request]
   (try
-    (case (:uri request)
-      "/" (handle-index request)
-      "/v2" (handle-v2 request)
-      "/viewer-v2" (handle-v2 request)
-      "/api/pages" (handle-pages request)
-      "/api/page" (handle-page request)
-      "/assets/viewer.js" (serve-file "viewer/src/viewer/client.js" "application/javascript")
-      "/assets/viewer.cljs" (serve-file "viewer/src/viewer/client.cljs" "text/plain")
-      "/assets/viewer-v2.js" (serve-file "viewer/src/viewer/viewer-v2.js" "application/javascript")
-      "/assets/viewer-v2.css" (serve-file "viewer/src/viewer/viewer-v2.css" "text/css")
-      "/health" (json-response {:ok true})
-      (not-found))
+    (let [uri (:uri request)]
+      (cond
+        (= uri "/") (handle-list request)
+        (= uri "/v1") (handle-v1 request)
+        (= uri "/v2") (handle-v2 request)
+        (= uri "/viewer-v2") (handle-v2 request)
+        (= uri "/api/pages") (handle-pages request)
+        (= uri "/api/page") (handle-page request)
+        (= uri "/assets/viewer.js") (serve-file "viewer/src/viewer/client.js" "application/javascript")
+        (= uri "/assets/viewer.cljs") (serve-file "viewer/src/viewer/client.cljs" "text/plain")
+        (= uri "/assets/viewer-v2.js") (serve-file "viewer/src/viewer/viewer-v2.js" "application/javascript")
+        (= uri "/assets/viewer-v2.css") (serve-file "viewer/src/viewer/viewer-v2.css" "text/css")
+        (= uri "/health") (json-response {:ok true})
+        (page-slug-from-uri uri) (handle-detail request (page-slug-from-uri uri))
+        :else (not-found)))
     (catch Throwable t
       (error-response 500 (.getMessage t) (or (ex-data t) {})))))
 

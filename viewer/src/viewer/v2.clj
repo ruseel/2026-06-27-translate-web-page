@@ -1,7 +1,9 @@
 (ns viewer.v2
   (:require [cheshire.core :as json]
             [clojure.string :as str]
-            [common :as c]))
+            [common :as c])
+  (:import [java.net URLEncoder]
+           [java.nio.charset StandardCharsets]))
 
 (defn script-json [value]
   ;; Script tags are raw-text elements; escape characters that can terminate or
@@ -40,6 +42,64 @@
 (def moon-icon
   (icon "moon" "<path d=\"M20.98 11.62A9 9 0 1 1 12.38 3a7 7 0 0 0 8.6 8.62Z\"></path>"))
 
+(defn encode-url [s]
+  (URLEncoder/encode (str (or s "")) (.name StandardCharsets/UTF_8)))
+
+(defn page-href [ledger slug]
+  (str "/page/" (encode-url slug)
+       (when-not (str/blank? ledger)
+         (str "?ledger=" (encode-url ledger)))))
+
+(defn hostname [url]
+  (try
+    (some-> url java.net.URI. .getHost (str/replace #"^www\." ""))
+    (catch Throwable _ nil)))
+
+(defn short-hash [hash]
+  (when-not (str/blank? hash)
+    (subs hash 0 (min 12 (count hash)))))
+
+(defn render-page-card [ledger {:keys [slug title url sourceContentHash]}]
+  (str "<a class=\"v2-page-card\" href=\"" (c/html-escape (page-href ledger slug)) "\">"
+       "<span class=\"v2-card-kicker\">Translated page</span>"
+       "<h2>" (c/html-escape (or title slug "Untitled")) "</h2>"
+       "<p class=\"v2-card-url\">" (c/html-escape (or (hostname url) url "No source URL")) "</p>"
+       "<div class=\"v2-card-meta\">"
+       (when-not (str/blank? sourceContentHash)
+         (str "<span>hash " (c/html-escape (short-hash sourceContentHash)) "</span>"))
+       "<span>Read translation</span>"
+       "</div>"
+       "</a>"))
+
+(defn render-list-html [{:keys [ledger pages]}]
+  (str "<!doctype html><html lang=\"en\"><head>"
+       "<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+       "<title>Good Writes - Translation Archive</title>"
+       "<link rel=\"stylesheet\" href=\"/assets/viewer-v2.css\">"
+       "</head><body>"
+       "<div class=\"v2-shell\" id=\"app\">"
+       "<nav class=\"v2-nav\" aria-label=\"Reader navigation\"><div class=\"v2-nav-inner\">"
+       "<a class=\"v2-brand\" href=\"/\">" globe-icon "<span class=\"v2-brand-text\">Good Writes</span></a>"
+       "<div class=\"v2-nav-meta\">" (count pages) " translated pages</div>"
+       "</div></nav>"
+       "<main class=\"v2-main v2-list-main\">"
+       "<header class=\"v2-list-hero\">"
+       "<p class=\"v2-eyebrow\">Fluree · LLM translations · bilingual reader</p>"
+       "<h1>Good writing, translated for deep reading.</h1>"
+       "<p>Browse imported web pages and open a distraction-free side-by-side English/Korean reader.</p>"
+       "<form class=\"v2-ledger-form\" method=\"get\" action=\"/\">"
+       "<label>Ledger <input name=\"ledger\" value=\"" (c/html-escape ledger) "\"></label>"
+       "<button type=\"submit\">Load</button>"
+       "</form>"
+       "</header>"
+       (if (seq pages)
+         (str "<section class=\"v2-page-grid\" aria-label=\"Translated pages\">"
+              (apply str (map #(render-page-card ledger %) pages))
+              "</section>")
+         "<section class=\"v2-empty-state\"><h2>No translated pages yet.</h2><p>Fetch and translate a page, then come back here to read it.</p></section>")
+       "</main></div>"
+       "</body></html>"))
+
 (defn render-app-html [{:keys [ledger pages selected-slug view]}]
   (let [{:keys [page]} view
         title (or (:title page) "Translation Reader")
@@ -53,8 +113,8 @@
          "<div class=\"v2-progress\" id=\"progress\"></div>"
          "<div class=\"v2-shell\" id=\"app\">"
          "<nav class=\"v2-nav\" aria-label=\"Reader navigation\"><div class=\"v2-nav-inner\">"
-         "<a class=\"v2-brand\" href=\"/v2\">" globe-icon "<span class=\"v2-brand-text\">Good Writes</span></a>"
-         "<div class=\"v2-nav-meta\" id=\"nav-meta\">" (c/html-escape (or url title)) "</div>"
+         "<a class=\"v2-brand\" href=\"/\">" globe-icon "<span class=\"v2-brand-text\">Good Writes</span></a>"
+         "<div class=\"v2-nav-actions\"><a class=\"v2-nav-link\" href=\"/\">All pages</a><div class=\"v2-nav-meta\" id=\"nav-meta\">" (c/html-escape (or url title)) "</div></div>"
          "</div></nav>"
          "<main class=\"v2-main\" id=\"reader-main\">"
          "<header class=\"v2-header\">"

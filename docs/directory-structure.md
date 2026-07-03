@@ -76,8 +76,9 @@ Small inspection command for the living seed. It reports article metadata, sourc
 Small queryable viewer grown from the vertical slice:
 
 - `data.clj` queries Fluree for pages, source segments, and all matching `TranslatedParagraph` candidates with `TranslationRun` provenance.
-- `server.clj` serves the Datastar-ready HTML shell plus `/api/pages` and `/api/page` JSON endpoints via `bb viewer`.
-- `client.cljs` is the CLJS source for browser interactions; `client.js` is the currently served browser artifact.
+- `server.clj` serves the reader archive at `/`, reader details at `/page/<slug>`, legacy queryable UI at `/v1`, plus `/api/pages` and `/api/page` JSON endpoints via `bb viewer`.
+- `v2.clj`, `viewer-v2.css`, and `viewer-v2.js` define the current archive/detail reader UI.
+- `client.cljs` is the CLJS source for legacy v1 browser interactions; `client.js` is the currently served legacy browser artifact.
 
 ### `out/`
 
