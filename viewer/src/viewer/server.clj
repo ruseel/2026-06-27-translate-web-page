@@ -3,6 +3,7 @@
             [clojure.string :as str]
             [org.httpkit.server :as http]
             [viewer.data :as data]
+            [viewer.v2 :as v2]
             [common :as c])
   (:import [java.net URLDecoder]
            [java.nio.charset StandardCharsets]))
@@ -193,6 +194,10 @@
   (let [state (initial-state (request-query request))]
     (response 200 "text/html" (render-app-html state))))
 
+(defn handle-v2 [request]
+  (let [state (initial-state (request-query request))]
+    (response 200 "text/html" (v2/render-app-html state))))
+
 (defn handle-pages [request]
   (let [query (request-query request)
         ledger (param query :ledger default-ledger)]
@@ -213,10 +218,14 @@
   (try
     (case (:uri request)
       "/" (handle-index request)
+      "/v2" (handle-v2 request)
+      "/viewer-v2" (handle-v2 request)
       "/api/pages" (handle-pages request)
       "/api/page" (handle-page request)
       "/assets/viewer.js" (serve-file "viewer/src/viewer/client.js" "application/javascript")
       "/assets/viewer.cljs" (serve-file "viewer/src/viewer/client.cljs" "text/plain")
+      "/assets/viewer-v2.js" (serve-file "viewer/src/viewer/viewer-v2.js" "application/javascript")
+      "/assets/viewer-v2.css" (serve-file "viewer/src/viewer/viewer-v2.css" "text/css")
       "/health" (json-response {:ok true})
       (not-found))
     (catch Throwable t
