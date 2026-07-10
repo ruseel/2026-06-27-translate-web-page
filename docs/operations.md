@@ -1,4 +1,6 @@
-# rsl-pi-1 deployment notes
+# Operations
+
+Deployment and operations notes for the current `rsl-pi-1` hosted ledger and public viewer.
 
 Current deployment target:
 
