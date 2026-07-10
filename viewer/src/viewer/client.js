@@ -43,7 +43,7 @@
     const el = $("summary");
     if (!el) return;
     el.innerHTML = [
-      `${summary.segmentCount || 0} segments`,
+      `${summary.paragraphCount || 0} paragraphs`,
       `${summary.filteredCandidateCount || 0}/${summary.candidateCount || 0} candidates`,
       `${summary.modelCount || 0} models`,
     ].map((x) => `<span class="badge">${html(x)}</span>`).join("");
@@ -71,15 +71,15 @@
       </details>
     </article>`;
 
-  const segmentHtml = (segment) => `
-    <section class="segment" id="segment-${segment.position}" data-segment="${segment.position}">
+  const paragraphHtml = (paragraph) => `
+    <section class="paragraph" id="paragraph-${paragraph.position}" data-paragraph="${paragraph.position}">
       <div class="source">
-        <div class="eyebrow">#${segment.position} · ${html(segment.kind)}</div>
-        <p lang="en">${html(segment.source)}</p>
+        <div class="eyebrow">#${paragraph.position} · ${html(paragraph.kind)}</div>
+        <p lang="en">${html(paragraph.source)}</p>
       </div>
       <div class="translations">
-        ${(segment.candidates || []).length
-          ? segment.candidates.map(candidateHtml).join("")
+        ${(paragraph.candidates || []).length
+          ? paragraph.candidates.map(candidateHtml).join("")
           : '<div class="empty">No translations match these filters.</div>'}
       </div>
     </section>`;
@@ -88,16 +88,16 @@
     const view = state.view;
     if (!view) return;
     const page = view.page || {};
-    document.title = `${page.title || "Fluree Translation Viewer"} · Translation Viewer`;
-    if ($("page-title")) $("page-title").textContent = page.title || "Fluree Translation Viewer";
+    document.title = `${page.title || "Fluree Translation Reader"} · Translation Reader`;
+    if ($("page-title")) $("page-title").textContent = page.title || "Fluree Translation Reader";
     if ($("page-url")) $("page-url").textContent = page.url || "";
     renderSummary(view.summary);
     const filters = view.filters || {};
     renderSelectOptions($("language"), filters.languages || [], state.language, "All languages");
     renderSelectOptions($("model"), filters.models || [], state.model, "All models");
     renderSelectOptions($("status"), filters.statuses || [], state.status, "All statuses");
-    const segments = $("segments");
-    if (segments) segments.innerHTML = (view.segments || []).map(segmentHtml).join("");
+    const paragraphs = $("paragraphs");
+    if (paragraphs) paragraphs.innerHTML = (view.paragraphs || []).map(paragraphHtml).join("");
   };
 
   const queryString = (params) => {

@@ -63,7 +63,7 @@
     }));
   };
 
-  const selectedCandidate = (segment) => (segment.candidates || [])[0] || null;
+  const selectedCandidate = (paragraph) => (paragraph.candidates || [])[0] || null;
 
   const tagFor = (kind) => ({
     h1: "h2",
@@ -72,8 +72,8 @@
     quote: "blockquote",
   })[kind] || "p";
 
-  const noteNumber = (segment) => {
-    const match = String(segment.source ?? "").match(/^\\?\[(\d+)\\?\]\s/);
+  const noteNumber = (paragraph) => {
+    const match = String(paragraph.source ?? "").match(/^\\?\[(\d+)\\?\]\s/);
     return match ? match[1] : null;
   };
 
@@ -83,45 +83,45 @@
     return `<${tag} class="v2-text ${className}" lang="${html(lang)}">${prefix}${inlineHtml(text)}</${tag}>`;
   };
 
-  const sourceHtml = (segment) => textBlockHtml({
+  const sourceHtml = (paragraph) => textBlockHtml({
     className: "v2-source",
     lang: "en",
-    kind: segment.kind,
-    text: segment.source,
+    kind: paragraph.kind,
+    text: paragraph.source,
   });
 
-  const translationHtml = (segment) => {
-    const candidate = selectedCandidate(segment);
+  const translationHtml = (paragraph) => {
+    const candidate = selectedCandidate(paragraph);
     if (!candidate) {
       return '<p class="v2-text v2-translation v2-empty">No translation matches this page.</p>';
     }
     return textBlockHtml({
       className: "v2-translation",
       lang: candidate.language || "ko",
-      kind: segment.kind,
+      kind: paragraph.kind,
       text: candidate.text,
     });
   };
 
-  const paragraphHtml = (segment) => {
+  const paragraphHtml = (paragraph) => {
     const parts = [];
-    const note = noteNumber(segment);
-    if (state.layout !== "ko-only") parts.push(sourceHtml(segment));
-    if (state.layout !== "en-only") parts.push(translationHtml(segment));
+    const note = noteNumber(paragraph);
+    if (state.layout !== "ko-only") parts.push(sourceHtml(paragraph));
+    if (state.layout !== "en-only") parts.push(translationHtml(paragraph));
     return `
-      <section class="v2-paragraph" id="segment-${html(segment.position)}" data-layout="${html(state.layout)}">
+      <section class="v2-paragraph" id="paragraph-${html(paragraph.position)}" data-layout="${html(state.layout)}">
         ${note ? `<span class="v2-anchor" id="f${html(note)}n"></span>` : ""}
         ${parts.join("")}
       </section>`;
   };
 
   const renderReader = () => {
-    const el = $("segments");
+    const el = $("paragraphs");
     if (!el) return;
-    const segments = state.view?.segments || [];
-    el.innerHTML = segments.length
-      ? segments.map(paragraphHtml).join("")
-      : '<p class="v2-empty">No page segments found.</p>';
+    const paragraphs = state.view?.paragraphs || [];
+    el.innerHTML = paragraphs.length
+      ? paragraphs.map(paragraphHtml).join("")
+      : '<p class="v2-empty">No page paragraphs found.</p>';
   };
 
   const renderFrame = () => {

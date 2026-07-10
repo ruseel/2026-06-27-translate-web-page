@@ -23,7 +23,7 @@
   (format "SELECT ?title ?url ?hash ?defuddle WHERE { <%s> a <https://schema.org/WebPage> . OPTIONAL { <%s> <https://schema.org/name> ?title . } OPTIONAL { <%s> <https://schema.org/url> ?url . } OPTIONAL { <%s> <%ssourceContentHash> ?hash . } OPTIONAL { <%s> <%sdefuddleVersion> ?defuddle . } } LIMIT 1"
           page-id page-id page-id page-id c/twp page-id c/twp))
 
-(defn segment-query [page-id]
+(defn paragraph-query [page-id]
   (format (str "SELECT ?p ?pos ?kind ?source ?t ?translation ?lang ?status ?run "
                "?provider ?model ?thinking ?prompt ?promptHash ?translator ?license ?at WHERE { "
                "?p a <https://schema.org/Paragraph> ; "
@@ -137,7 +137,7 @@
      :license (bval row :license)
      :generatedAt (or (bval row :at) "")}))
 
-(defn row->segment-seed [row]
+(defn row->paragraph-seed [row]
   {:id (bval row :p)
    :position (parse-long (bval row :pos))
    :kind (or (bval row :kind) "p")
@@ -154,13 +154,13 @@
        (sort-by (juxt :generatedAt :model :id))
        vec))
 
-(defn all-segments [ledger page-id]
-  (let [rows (get-in (c/fluree-query-json ledger (segment-query page-id)) [:results :bindings])]
+(defn all-paragraphs [ledger page-id]
+  (let [rows (get-in (c/fluree-query-json ledger (paragraph-query page-id)) [:results :bindings])]
     (->> rows
          (group-by #(bval % :pos))
          vals
          (mapv (fn [rows]
-                 (let [seed (row->segment-seed (first rows))]
+                 (let [seed (row->paragraph-seed (first rows))]
                    (assoc seed :candidates (distinct-candidates (keep candidate-from-row rows))))))
          (sort-by :position)
          vec)))
@@ -170,13 +170,13 @@
        (or (str/blank? (:status filters)) (= (:status filters) (:status candidate)))
        (or (str/blank? (:model filters)) (= (:model filters) (:model candidate)))))
 
-(defn apply-filters [segments filters]
-  (mapv (fn [segment]
-          (update segment :candidates #(filterv (partial matches-filter? filters) %)))
-        segments))
+(defn apply-filters [paragraphs filters]
+  (mapv (fn [paragraph]
+          (update paragraph :candidates #(filterv (partial matches-filter? filters) %)))
+        paragraphs))
 
-(defn sorted-values [segments k]
-  (->> segments
+(defn sorted-values [paragraphs k]
+  (->> paragraphs
        (mapcat :candidates)
        (keep k)
        (remove str/blank?)
@@ -186,18 +186,18 @@
 
 (defn page-view [ledger slug filters]
   (let [page-id (c/page-id slug)
-        segments (all-segments ledger page-id)
-        filtered (apply-filters segments filters)
-        candidates (mapcat :candidates segments)
+        paragraphs (all-paragraphs ledger page-id)
+        filtered (apply-filters paragraphs filters)
+        candidates (mapcat :candidates paragraphs)
         filtered-candidates (mapcat :candidates filtered)]
     {:ledger ledger
      :page (fetch-page-meta ledger page-id slug)
      :filters {:selected filters
-               :models (sorted-values segments :model)
-               :languages (sorted-values segments :language)
-               :statuses (sorted-values segments :status)}
-     :summary {:segmentCount (count segments)
+               :models (sorted-values paragraphs :model)
+               :languages (sorted-values paragraphs :language)
+               :statuses (sorted-values paragraphs :status)}
+     :summary {:paragraphCount (count paragraphs)
                :candidateCount (count candidates)
                :filteredCandidateCount (count filtered-candidates)
                :modelCount (count (set (keep :model candidates)))}
-     :segments filtered}))
+     :paragraphs filtered}))

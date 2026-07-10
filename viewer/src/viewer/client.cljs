@@ -57,12 +57,12 @@
                    (for [{:keys [slug title]} pages]
                      (option slug (str title " — " slug) (:slug @state))))))))
 
-(defn render-summary! [{:keys [segmentCount candidateCount filteredCandidateCount modelCount]}]
+(defn render-summary! [{:keys [paragraphCount candidateCount filteredCandidateCount modelCount]}]
   (when-let [el (by-id "summary")]
     (set! (.-innerHTML el)
           (apply str
                  (map #(str "<span class=\"badge\">" (html %) "</span>")
-                      [(str (or segmentCount 0) " segments")
+                      [(str (or paragraphCount 0) " paragraphs")
                        (str (or filteredCandidateCount 0) "/" (or candidateCount 0) " candidates")
                        (str (or modelCount 0) " models")])))))
 
@@ -83,8 +83,8 @@
        "<dt>run</dt><dd title=\"" (html run) "\">" (html (short-id run)) "</dd>"
        "</dl></details></article>"))
 
-(defn segment-html [{:keys [position kind source candidates]}]
-  (str "<section class=\"segment\" id=\"segment-" position "\" data-segment=\"" position "\">"
+(defn paragraph-html [{:keys [position kind source candidates]}]
+  (str "<section class=\"paragraph\" id=\"paragraph-" position "\" data-paragraph=\"" position "\">"
        "<div class=\"source\"><div class=\"eyebrow\">#" position " · " (html kind) "</div>"
        "<p lang=\"en\">" (html source) "</p></div>"
        "<div class=\"translations\">"
@@ -95,17 +95,17 @@
 
 (defn render-view! []
   (let [{:keys [view language model status]} @state
-        {:keys [page filters summary segments]} view]
+        {:keys [page filters summary paragraphs]} view]
     (when view
-      (set! (.-title js/document) (str (or (:title page) "Fluree Translation Viewer") " · Translation Viewer"))
-      (when-let [el (by-id "page-title")] (set! (.-textContent el) (or (:title page) "Fluree Translation Viewer")))
+      (set! (.-title js/document) (str (or (:title page) "Fluree Translation Reader") " · Translation Reader"))
+      (when-let [el (by-id "page-title")] (set! (.-textContent el) (or (:title page) "Fluree Translation Reader")))
       (when-let [el (by-id "page-url")] (set! (.-textContent el) (or (:url page) "")))
       (render-summary! summary)
       (render-select-options! (by-id "language") (:languages filters) language "All languages")
       (render-select-options! (by-id "model") (:models filters) model "All models")
       (render-select-options! (by-id "status") (:statuses filters) status "All statuses")
-      (when-let [el (by-id "segments")]
-        (set! (.-innerHTML el) (apply str (map segment-html segments)))))))
+      (when-let [el (by-id "paragraphs")]
+        (set! (.-innerHTML el) (apply str (map paragraph-html paragraphs)))))))
 
 (defn fetch-json [url]
   (-> (js/fetch url #js {:headers #js {:Accept "application/json"}})

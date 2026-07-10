@@ -104,8 +104,8 @@
        "</dl></details>"
        "</article>"))
 
-(defn render-segment [{:keys [position kind source candidates]}]
-  (str "<section class=\"segment\" id=\"segment-" position "\" data-segment=\"" position "\">"
+(defn render-paragraph [{:keys [position kind source candidates]}]
+  (str "<section class=\"paragraph\" id=\"paragraph-" position "\" data-paragraph=\"" position "\">"
        "<div class=\"source\">"
        "<div class=\"eyebrow\">#" position " · " (c/html-escape kind) "</div>"
        "<p lang=\"en\">" (c/html-escape source) "</p>"
@@ -117,11 +117,11 @@
        "</div>"
        "</section>"))
 
-(defn render-segments [segments]
-  (apply str (map render-segment segments)))
+(defn render-paragraphs [paragraphs]
+  (apply str (map render-paragraph paragraphs)))
 
-(defn render-summary [{:keys [segmentCount candidateCount filteredCandidateCount modelCount]}]
-  (str "<span class=\"badge\">" segmentCount " segments</span>"
+(defn render-summary [{:keys [paragraphCount candidateCount filteredCandidateCount modelCount]}]
+  (str "<span class=\"badge\">" paragraphCount " paragraphs</span>"
        "<span class=\"badge\">" filteredCandidateCount "/" candidateCount " candidates</span>"
        "<span class=\"badge\">" modelCount " models</span>"))
 
@@ -131,8 +131,8 @@
        "body{margin:0}.app{max-width:1440px;margin:0 auto;padding:28px 24px 72px}.hero{display:flex;gap:20px;align-items:flex-start;justify-content:space-between;margin-bottom:22px}"
        "h1{font-size:clamp(28px,4vw,54px);line-height:1;margin:0 0 10px}.subtle{color:#667085}.toolbar{position:sticky;top:0;z-index:2;display:grid;grid-template-columns:1fr 2fr repeat(3,1fr) auto;gap:10px;padding:12px;margin:0 -12px 24px;background:rgba(246,243,237,.92);backdrop-filter:blur(14px);border-bottom:1px solid rgba(23,32,51,.1)}"
        "label{display:grid;gap:4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#667085}select,input,button{font:inherit;border:1px solid rgba(23,32,51,.18);border-radius:12px;background:#fff;padding:10px 12px}button{cursor:pointer;background:#172033;color:white;border-color:#172033}.summary{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.badge{border:1px solid rgba(23,32,51,.14);background:rgba(255,255,255,.65);border-radius:999px;padding:5px 10px;font-size:13px;color:#475467}"
-       ".segment{display:grid;grid-template-columns:minmax(260px,.82fr) minmax(360px,1.18fr);gap:18px;padding:18px 0;border-top:1px solid rgba(23,32,51,.12)}.source,.candidate,.empty{background:rgba(255,255,255,.68);border:1px solid rgba(23,32,51,.08);border-radius:18px;padding:18px 20px;box-shadow:0 10px 28px rgba(23,32,51,.04)}.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#8a6d3b;margin-bottom:10px}.source p,.candidate p{line-height:1.72;margin:0}.translations{display:grid;gap:12px}.candidate-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}.candidate-head span{font-size:12px;color:#667085;background:#f2f4f7;border-radius:999px;padding:3px 8px}details{margin-top:12px;color:#667085}summary{cursor:pointer}dl{display:grid;grid-template-columns:90px 1fr;gap:6px;font-size:13px}dt{font-weight:700}.empty{color:#667085;font-style:italic}.error{border:1px solid #fda29b;background:#fff1f0;color:#912018;border-radius:14px;padding:12px 14px;margin-bottom:14px}"
-       "@media(max-width:900px){.toolbar{grid-template-columns:1fr}.segment{grid-template-columns:1fr}.app{padding:20px 14px 56px}.hero{display:block}}"))
+       ".paragraph{display:grid;grid-template-columns:minmax(260px,.82fr) minmax(360px,1.18fr);gap:18px;padding:18px 0;border-top:1px solid rgba(23,32,51,.12)}.source,.candidate,.empty{background:rgba(255,255,255,.68);border:1px solid rgba(23,32,51,.08);border-radius:18px;padding:18px 20px;box-shadow:0 10px 28px rgba(23,32,51,.04)}.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#8a6d3b;margin-bottom:10px}.source p,.candidate p{line-height:1.72;margin:0}.translations{display:grid;gap:12px}.candidate-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}.candidate-head span{font-size:12px;color:#667085;background:#f2f4f7;border-radius:999px;padding:3px 8px}details{margin-top:12px;color:#667085}summary{cursor:pointer}dl{display:grid;grid-template-columns:90px 1fr;gap:6px;font-size:13px}dt{font-weight:700}.empty{color:#667085;font-style:italic}.error{border:1px solid #fda29b;background:#fff1f0;color:#912018;border-radius:14px;padding:12px 14px;margin-bottom:14px}"
+       "@media(max-width:900px){.toolbar{grid-template-columns:1fr}.paragraph{grid-template-columns:1fr}.app{padding:20px 14px 56px}.hero{display:block}}"))
 
 (defn script-json [value]
   ;; Script tags are raw-text elements; escape the only characters that can
@@ -143,8 +143,8 @@
       (str/replace "&" "\\u0026")))
 
 (defn render-app-html [{:keys [ledger pages selected-slug view filters]}]
-  (let [{:keys [page summary segments]} view
-        title (or (:title page) "Fluree Translation Viewer")
+  (let [{:keys [page summary paragraphs]} view
+        title (or (:title page) "Fluree Translation Reader")
         boot {:ledger ledger :pages pages :selectedSlug selected-slug :view view}
         signals {:ledger ledger
                  :slug selected-slug
@@ -153,7 +153,7 @@
                  :status (:status filters)}]
     (str "<!doctype html><html lang=\"en\"><head>"
          "<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
-         "<title>" (c/html-escape title) " · Translation Viewer</title>"
+         "<title>" (c/html-escape title) " · Translation Reader</title>"
          "<script type=\"module\" src=\"https://cdn.jsdelivr.net/gh/starfederation/datastar@main/bundles/datastar.js\"></script>"
          "<style>" (app-css) "</style></head>"
          "<body><main class=\"app\" id=\"app\" data-signals='" (c/html-escape (json/generate-string signals)) "'>"
@@ -161,7 +161,7 @@
          "<h1 id=\"page-title\">" (c/html-escape title) "</h1>"
          "<p id=\"page-url\" class=\"subtle\">" (c/html-escape (:url page)) "</p>"
          "<div class=\"summary\" id=\"summary\">" (render-summary summary) "</div></div>"
-         "<div class=\"subtle\">Queryable translation candidates grouped by source segment.</div></div>"
+         "<div class=\"subtle\">Queryable translation candidates grouped by source paragraph.</div></div>"
          "<div id=\"error\"></div>"
          "<form class=\"toolbar\" id=\"toolbar\">"
          "<label>Ledger<input id=\"ledger\" name=\"ledger\" value=\"" (c/html-escape ledger) "\" data-bind-ledger></label>"
@@ -171,7 +171,7 @@
          "<label>Status<select id=\"status\" name=\"status\" data-bind-status>" (option-list (get-in view [:filters :statuses]) (:status filters) "All statuses") "</select></label>"
          "<button id=\"refresh\" type=\"button\">Refresh</button>"
          "</form>"
-         "<div id=\"segments\">" (render-segments segments) "</div>"
+         "<div id=\"paragraphs\">" (render-paragraphs paragraphs) "</div>"
          "<script id=\"boot-data\" type=\"application/json\">" (script-json boot) "</script>"
          "<script src=\"/assets/viewer.js\"></script>"
          "</main></body></html>")))
@@ -186,8 +186,8 @@
                {:ledger ledger
                 :page {:title "No pages in ledger"}
                 :filters {:selected filters :models [] :languages [] :statuses []}
-                :summary {:segmentCount 0 :candidateCount 0 :filteredCandidateCount 0 :modelCount 0}
-                :segments []})]
+                :summary {:paragraphCount 0 :candidateCount 0 :filteredCandidateCount 0 :modelCount 0}
+                :paragraphs []})]
     {:ledger ledger :pages pages :selected-slug selected-slug :filters filters :view view}))
 
 (defn list-state [query]

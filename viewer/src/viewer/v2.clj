@@ -76,7 +76,7 @@
 (defn render-list-html [{:keys [ledger pages]}]
   (str "<!doctype html><html lang=\"en\"><head>"
        "<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
-       "<title>Good Writes - Translation Archive</title>"
+       "<title>Good Writes - Translation Commons</title>"
        "<link rel=\"stylesheet\" href=\"/assets/viewer-v2.css\">"
        "</head><body>"
        "<div class=\"v2-shell\" id=\"app\">"
@@ -126,7 +126,7 @@
          ">" (c/html-escape url) "</a>"
          "</header>"
          "<div id=\"error\"></div>"
-         "<article class=\"v2-reader\" id=\"segments\" aria-live=\"polite\"></article>"
+         "<article class=\"v2-reader\" id=\"paragraphs\" aria-live=\"polite\"></article>"
          "</main></div>"
          "<div class=\"v2-controls\" id=\"reader-controls\" aria-label=\"Reader controls\">"
          "<div class=\"v2-control-group\" role=\"group\" aria-label=\"Layout\">"
